@@ -132,6 +132,32 @@ Expected to find a ${mdFilenames.join(' or ')} at: ${pathToLocalWct}/
       response.send(options.webserver._generatedIndexContent);
     });
 
+    var walkSync = function(dir, filelist) {
+      var fs = fs || require('fs'),
+          files = fs.readdirSync(dir);
+      filelist = filelist || [];
+      files.forEach(function(file) {
+        if (fs.statSync(dir + file).isDirectory()) {
+          filelist = walkSync(dir + file + '/', filelist);
+        }
+        else {
+          filelist.push(file);
+        }
+      });
+      return filelist;
+    };
+
+    options.suites.forEach((folder) => {
+      var files = [];
+      walkSync(folder, files);
+      files.forEach((file) =>{
+        additionalRoutes.set(file, (_request, response) => {
+          response.set(DEFAULT_HEADERS);
+          response.send(file);
+        });
+      })
+    });
+
     // Serve up project & dependencies via polyserve
     const polyserveResult = await startServers({
       root: options.root,
